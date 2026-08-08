@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: luna_postgres
+    environment:
+      POSTGRES_USER: luna_user
+      POSTGRES_PASSWORD: luna_password
+      POSTGRES_DB: luna_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - luna_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: luna_backend
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://luna_user:luna_password@postgres:5432/luna_db
+      JWT_SECRET: your-secret-key-change-in-production
+      NODE_ENV: development
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - luna_network
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: luna_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:5000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - luna_network
+    command: npm start
+
+volumes:
+  postgres_data:
+
+networks:
+  luna_network:
+    driver: bridge
