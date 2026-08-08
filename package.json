@@ -1,0 +1,17 @@
+{
+  "name": "luna",
+  "version": "1.0.0",
+  "description": "Luna - Music Streaming Platform",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm start\"",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build",
+    "start": "concurrently \"cd backend && npm start\" \"cd frontend && npm start\""
+  },
+  "keywords": ["music", "streaming", "spotify"],
+  "author": "spirits2000-boop",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.1"
+  }
+}

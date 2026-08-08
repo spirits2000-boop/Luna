@@ -1,61 +1,72 @@
 version: '3.8'
 
 services:
-  postgres:
+  # PostgreSQL Database
+  db:
     image: postgres:15-alpine
-    container_name: luna_postgres
+    container_name: luna_db
     environment:
+      POSTGRES_DB: luna_db
       POSTGRES_USER: luna_user
       POSTGRES_PASSWORD: luna_password
-      POSTGRES_DB: luna_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./backend/database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U luna_user -d luna_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
-      - luna_network
+      - luna-network
 
+  # Backend API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: luna_backend
+    environment:
+      DATABASE_URL: postgresql://luna_user:luna_password@db:5432/luna_db
+      PORT: 5000
+      NODE_ENV: development
+      JWT_SECRET: your-super-secret-key-change-in-production
+      JWT_EXPIRE: 7d
     ports:
       - "5000:5000"
-    environment:
-      DATABASE_URL: postgresql://luna_user:luna_password@postgres:5432/luna_db
-      JWT_SECRET: your-secret-key-change-in-production
-      NODE_ENV: development
     depends_on:
-      - postgres
+      db:
+        condition: service_healthy
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - ./backend/src:/app/src
     networks:
-      - luna_network
+      - luna-network
     command: npm run dev
 
+  # Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: luna_frontend
-    ports:
-      - "3000:3000"
     environment:
       REACT_APP_API_URL: http://localhost:5000
+    ports:
+      - "3000:3000"
     depends_on:
       - backend
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/src:/app/src
     networks:
-      - luna_network
+      - luna-network
     command: npm start
 
 volumes:
   postgres_data:
 
 networks:
-  luna_network:
+  luna-network:
     driver: bridge
